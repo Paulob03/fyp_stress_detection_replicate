@@ -10,7 +10,7 @@ venv/
 *.egg-info/
 
 # Data files
-*.csv
+
 *.pkl
 *.h5
 data/
