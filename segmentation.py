@@ -22,10 +22,14 @@ def segmentation(preprocessed_data):
 
         bvp_segment_amount = len(bvp_signal) // bvp_samples_per_segment
         eda_segment_amount = len(eda_signal) // eda_samples_per_segment
+        
+ 
 
-        subject_durations[subject_id] = bvp_segment_amount
+ 
+        subject_durations[subject_id] = min(bvp_segment_amount, eda_segment_amount)
+        num_segments = min(bvp_segment_amount, eda_segment_amount)
 
-        for i in range(bvp_segment_amount):
+        for i in range(num_segments):
             bvp_start = i * bvp_samples_per_segment 
             bvp_end = bvp_start + bvp_samples_per_segment
             eda_start = i * eda_samples_per_segment

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from scipy.signal import cheby2, filtfilt, find_peaks, resample_poly
+from scipy.signal import cheby2, sosfiltfilt, find_peaks, resample_poly
 from scipy.ndimage import gaussian_filter1d
 from scipy import stats
 from load_data import *
@@ -24,7 +24,7 @@ def preprocess_subjects(subjects_data):
 
 #bandpass filtering to BVP signal to isolate heart rate frequencies.
 def preprocess_bvp(bvp_signal):
-    order = 4
+    order = 2
     rs = 20
     low_freq = 0.5
     high_freq = 5.0
@@ -33,9 +33,9 @@ def preprocess_bvp(bvp_signal):
     low_normalized = low_freq / nyquist
     high_normalized = high_freq / nyquist
 
-    b, a = cheby2(order, rs, [low_normalized, high_normalized], btype='bandpass')
+    sos  = cheby2(order, rs, [low_normalized, high_normalized], btype='bandpass', output='sos') #Second-Order Sections ('sos'),  Breaks the filter into cascade of 2nd-order filters. More numerically stable
 
-    bvp_signal_filtered = filtfilt(b, a, bvp_signal)
+    bvp_signal_filtered = sosfiltfilt(sos, bvp_signal)
 
     return bvp_signal_filtered
 
@@ -49,11 +49,6 @@ def preprocess_eda(eda_signal):
     eda_smoothed = gaussian_filter1d(eda_upsampled, sigma=sigma_samples)
 
     return eda_smoothed
-
-
-
-
-
 
 if __name__ == "__main__":
     subjects_data = load_all_subjects()

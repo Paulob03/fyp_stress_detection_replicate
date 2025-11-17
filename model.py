@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
+from imblearn.ensemble import BalancedRandomForestClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_validate, GroupKFold
-from sklearn.metrics import classification_report, f1_score, make_scorer
+from sklearn.model_selection import cross_validate, GroupKFold, cross_val_predict, GridSearchCV
+from sklearn.metrics import classification_report, f1_score, make_scorer, confusion_matrix, ConfusionMatrixDisplay
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
+import matplotlib.pyplot as plt
 
 from feature_extraction import *
 
@@ -27,47 +29,53 @@ def model(features):
 
     pipeline = ImbPipeline([
         ('smote', SMOTE(random_state=42)),
-        ('classifier', RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
+        ('classifier', BalancedRandomForestClassifier(
+
+            class_weight='balanced',
             random_state=42,
             n_jobs=-1
         ))
     ])
-    #Before smote
-    '''
-    rf_classifier = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    random_state=42,
-    n_jobs=-1
-    )'''
 
-    gkf = GroupKFold(n_splits=10)
+    gkf = GroupKFold(n_splits=29)
 
-
+    
+    param_grid = {
+        'classifier__n_estimators': [50, 100, 150, 200],
+        'classifier__max_depth': [20, 25, 30], 
+        #'classifier__min_samples_split': [2, 5, 10],
+        #'classifier__min_samples_leaf': [1, 2, 4]
+    }
+    
+    gs = GridSearchCV(pipeline, param_grid, scoring="accuracy", cv=gkf)
+    gs.fit(X, y, groups=groups)
+    print(gs.best_params_, gs.best_score_)
 
     cv_results = cross_validate(
-        pipeline, X, y, 
-        groups=groups, 
-        cv=gkf, 
-        scoring={
+    gs.best_estimator_, 
+    X, y, 
+    groups=groups, 
+    cv=gkf, 
+    scoring={
         'accuracy': 'accuracy',
         'f1': 'f1',
         'precision': 'precision',
-        'recall': 'recall'},
-        return_train_score=False
-    )
+        'recall': 'recall'
+    },
+    return_train_score=False 
+)
+    print(f"\nAccuracy Mean: {np.mean(cv_results['test_accuracy']):.4f}")
+    print(f"F1-Score Mean: {np.mean(cv_results['test_f1']):.4f}")
+    print(f"Precision Mean: {np.mean(cv_results['test_precision']):.4f}")
+    print(f"Recall Mean: {np.mean(cv_results['test_recall']):.4f}")
+    y_pred = cross_val_predict(gs.best_estimator_, X, y, groups=groups, cv=gkf)
 
-    print("Accuracy Mean: " + str(np.mean(cv_results['test_accuracy'])))
-    print("Accuracy Std: " + str(np.std(cv_results['test_accuracy'])))
-    print("F1-Score Mean: " + str(np.mean(cv_results['test_f1'])))
-    print("F1-Score Std: " + str(np.std(cv_results['test_f1'])))
-    print("Precision Mean: " + str(np.mean(cv_results['test_precision'])))
-    print("Precision Std: " + str(np.std(cv_results['test_precision'])))
-    print("Recall Mean: " + str(np.mean(cv_results['test_recall'])))
-    print("Recall Std: " + str(np.std(cv_results['test_recall'])))
+    cm = confusion_matrix(y, y_pred)
+    print(cm)
+    cm_display = ConfusionMatrixDisplay(confusion_matrix = cm, display_labels = ['REST', 'STRESS'])
 
+    cm_display.plot()
+    plt.show()
     return cv_results
 
 if __name__ == "__main__":

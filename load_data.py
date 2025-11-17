@@ -9,7 +9,6 @@ def load_subject_signals(subject_folder):
 
     bvp_df = pd.read_csv(os.path.join(subject_folder, 'BVP.csv'), header=None)
     bvp_signal = bvp_df.iloc[:, 0].astype(float).values
-
     eda_df = pd.read_csv(os.path.join(subject_folder, 'EDA.csv'), header=None)
     eda_df[0] = eda_df[0].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
     eda_signal = eda_df.iloc[:, 0].astype(float).values
