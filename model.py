@@ -28,10 +28,10 @@ def model(features):
     groups = df['subject_id'].values
 
     pipeline = ImbPipeline([
-        ('smote', SMOTE(random_state=42)),
+       # ('smote', SMOTE(random_state=42)),
         ('classifier', BalancedRandomForestClassifier(
 
-            class_weight='balanced',
+         #   class_weight='balanced',
             random_state=42,
             n_jobs=-1
         ))
@@ -41,10 +41,10 @@ def model(features):
 
     
     param_grid = {
-        'classifier__n_estimators': [50, 100, 150, 200],
-        'classifier__max_depth': [20, 25, 30], 
-        #'classifier__min_samples_split': [2, 5, 10],
-        #'classifier__min_samples_leaf': [1, 2, 4]
+        'classifier__n_estimators': [100],
+        'classifier__max_depth': [ 14, 16], 
+        'classifier__min_samples_split': [12],
+        'classifier__min_samples_leaf': [4]
     }
     
     gs = GridSearchCV(pipeline, param_grid, scoring="accuracy", cv=gkf)
@@ -62,12 +62,15 @@ def model(features):
         'precision': 'precision',
         'recall': 'recall'
     },
-    return_train_score=False 
-)
+    return_train_score=True 
+)   
+    print(f"\nTraining Accuracy Mean: {np.mean(cv_results['train_accuracy']):.4f}")
     print(f"\nAccuracy Mean: {np.mean(cv_results['test_accuracy']):.4f}")
     print(f"F1-Score Mean: {np.mean(cv_results['test_f1']):.4f}")
     print(f"Precision Mean: {np.mean(cv_results['test_precision']):.4f}")
     print(f"Recall Mean: {np.mean(cv_results['test_recall']):.4f}")
+    train_acc = np.mean(cv_results['train_accuracy'])
+    test_acc = np.mean(cv_results['test_accuracy'])
     y_pred = cross_val_predict(gs.best_estimator_, X, y, groups=groups, cv=gkf)
 
     cm = confusion_matrix(y, y_pred)
