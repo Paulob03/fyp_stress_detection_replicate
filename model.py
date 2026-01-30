@@ -42,8 +42,8 @@ def model(features):
     
     param_grid = {
         'classifier__n_estimators': [100],
-        'classifier__max_depth': [ 14, 16], 
-        'classifier__min_samples_split': [12],
+        'classifier__max_depth': [ 8], 
+        'classifier__min_samples_split': [10],
         'classifier__min_samples_leaf': [4]
     }
     
