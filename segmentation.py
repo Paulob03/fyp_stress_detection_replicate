@@ -108,8 +108,8 @@ def sliding_window_assign_labels(all_segments, subject_durations, window, step):
     return all_segments
 
 def sliding_windows(preprocessed_data):
-    segment_duration = 40 
-    step_size = 30
+    segment_duration = 60
+    step_size = 60
     bvp_fs=64.0
     eda_fs=64.0
 
@@ -167,7 +167,7 @@ def sliding_windows(preprocessed_data):
             # compute stats for [seg_start, seg_end] with label curr-label
             else:
                 seg_inx +=1
-                print(f"Segment {seg_inx}: time {seg_start/60:.2f}-{seg_end/60:.2f} min, period {count_period}, label {curr_label}")
+                
     
                 bvp_start = int(seg_start * bvp_fs)
                 bvp_end = int(seg_end * bvp_fs)
@@ -184,26 +184,6 @@ def sliding_windows(preprocessed_data):
 
                 })
                 seg_start += step_size
-
-
-                
-            
-
-         
-
-     
-        '''for i in range(num_segments):
-            bvp_start = i * bvp_segment_step
-            bvp_end = bvp_start + bvp_samples_per_segment  
-            eda_start = i * eda_segment_step
-            eda_end = eda_start + eda_samples_per_segment 
-
-            all_segments.append({
-                'subject_id': subject_id,
-                'segment_idx': i,
-                'bvp_segment': bvp_signal[bvp_start:bvp_end],
-                'eda_segment': eda_signal[eda_start:eda_end]
-             })'''
 
     #returns all segemnts: list of dict with segmented data
     return all_segments

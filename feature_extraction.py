@@ -69,6 +69,17 @@ def extract_features(valid_segments):
         pp_sum = pp_intervals[1:] + pp_intervals[:-1]
         segment['SD2'] = np.sqrt(0.5) * np.std(pp_sum)
 
+        # RMSSD: Root Mean Square of Successive Differences
+        pp_diff = np.diff(pp_intervals)
+        segment['RMSSD'] = np.sqrt(np.mean(pp_diff ** 2))
+
+        # SD1: Poincaré plot (short-term variability)
+        segment['SD1'] = np.sqrt(0.5) * np.std(pp_diff)
+
+        # pNN50: Percentage of successive intervals differing by >50ms
+        nn50 = np.sum(np.abs(pp_diff) > 0.05)  # 0.05 seconds = 50ms
+        segment['pNN50'] = 100 * nn50 / len(pp_diff) if len(pp_diff) > 0 else 0
+
         #Mean BVP
         segment['Mean_BVP'] = np.mean(bvp_signal)
         #Meadian BVP
@@ -125,6 +136,17 @@ def extract_features(valid_segments):
             hf_band = (freqs >= 0.15) & (freqs <= 0.4)
             #High-frequency power (0.15-0.4 Hz) from Welch PSD analysis*
             segment['HF'] = np.sum(psd[hf_band])
+
+            # NEW: LF band: 0.04 - 0.15 Hz
+            lf_band = (freqs >= 0.04) & (freqs <= 0.15)
+            segment['LF'] = np.sum(psd[lf_band])
+            
+            # NEW: LF/HF Ratio (stress indicator)
+            segment['LF_HF_Ratio'] = segment['LF'] / segment['HF'] if segment['HF'] > 0 else 0
+            
+            # NEW: HFn (Normalized HF Power)
+            total_power = segment['LF'] + segment['HF']
+            segment['HFn'] = segment['HF'] / total_power if total_power > 0 else 0
         else:
             segment['HF'] = 0
 
@@ -160,6 +182,7 @@ def extract_features(valid_segments):
             segment['M_Amp'] = 0
             segment['M_RT'] = 0
             segment['M_D'] = 0
+
     
     return valid_segments
 

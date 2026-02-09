@@ -15,14 +15,14 @@ def model(features):
     df = pd.DataFrame(features)
 
     feature_names = [
-        'Mean_PP', 'Std_PP', 'Mean_HR', 'Std_HR', 'SD2',
+        'Mean_PP', 'Std_PP', 'Mean_HR', 'Std_HR', 'SD2', 'RMSSD', 'SD1', 'pNN50',
         'Mean_BVP', 'Median_BVP', 'Mode_BVP', 'Min_BVP', 'Max_BVP', 'Std_BVP',
         'M_d1', 'Std_d1', 'M_d2', 'Std_d2', 'HF',
         'Mean_EDA', 'Median_EDA', 'Mode_EDA', 'Max_EDA', 'Min_EDA', 'Std_EDA',
-        'N_PEAKS', 'M_Amp', 'M_RT', 'M_D'
+        'N_PEAKS', 'M_Amp', 'M_RT', 'M_D', 'LF', 'LF_HF_Ratio', 'HFn'
     ]
-    
-
+     
+   
     X = df[feature_names].values
     y = df['label'].values
     groups = df['subject_id'].values
@@ -42,8 +42,8 @@ def model(features):
     
     param_grid = {
         'classifier__n_estimators': [100],
-        'classifier__max_depth': [ 8], 
-        'classifier__min_samples_split': [10],
+        'classifier__max_depth': [5, 6, 8], 
+        'classifier__min_samples_split': [8,10, 15],
         'classifier__min_samples_leaf': [4]
     }
     
@@ -62,8 +62,8 @@ def model(features):
         'precision': 'precision',
         'recall': 'recall'
     },
-    return_train_score=True 
-)   
+
+    return_train_score=True )
     print(f"\nTraining Accuracy Mean: {np.mean(cv_results['train_accuracy']):.4f}")
     print(f"\nAccuracy Mean: {np.mean(cv_results['test_accuracy']):.4f}")
     print(f"F1-Score Mean: {np.mean(cv_results['test_f1']):.4f}")

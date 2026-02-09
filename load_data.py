@@ -5,7 +5,7 @@ import os
 DATA_DIR = "Subjects"
 
 
-def load_subject_signals(subject_folder):
+def load_subject_signals_original(subject_folder):
 
     bvp_df = pd.read_csv(os.path.join(subject_folder, 'BVP.csv'), header=None)
     bvp_signal = bvp_df.iloc[:, 0].astype(float).values
@@ -14,6 +14,34 @@ def load_subject_signals(subject_folder):
     eda_signal = eda_df.iloc[:, 0].astype(float).values
 
     return bvp_signal, eda_signal
+
+def load_subject_signals(subject_folder):
+    bvp_df = pd.read_csv(os.path.join(subject_folder, 'BVP.csv'), header=None)
+    bvp_signal = bvp_df.iloc[:, 0].astype(float).values
+    
+    eda_df = pd.read_csv(os.path.join(subject_folder, 'EDA.csv'), header=None)
+    
+    # Define the cleaning function
+    def clean_eda_value(val):
+        val_str = str(val).strip()
+        
+        # Count periods
+        period_count = val_str.count('.')
+        
+        if period_count <= 1:
+            # Already in correct format (0.546114 or 123456)
+            return val_str
+        else:
+            # European format with thousands separators (9.788.716)
+            clean = val_str.replace('.', '')
+            return str(float(clean) / 1000000)
+    
+    eda_df[0] = eda_df[0].apply(clean_eda_value)
+    eda_signal = eda_df.iloc[:, 0].astype(float).values
+
+    return bvp_signal, eda_signal
+
+
 
 def load_all_subjects():
     DATA_DIR = "Subjects"
