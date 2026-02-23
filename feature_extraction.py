@@ -17,7 +17,7 @@ def extract_peak2peak(all_labeled_segments):
 
     min_pp_interval = 0.5
     max_pp_interval = 1.2
-    max_abnormal_percentage = 30
+    max_abnormal_percentage = 20
 
     
     for segment in all_labeled_segments:
@@ -183,7 +183,6 @@ def extract_features(valid_segments):
             segment['M_RT'] = 0
             segment['M_D'] = 0
 
-    
     return valid_segments
 
 

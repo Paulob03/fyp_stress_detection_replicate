@@ -25,8 +25,6 @@ def segmentation(preprocessed_data):
         eda_segment_amount = len(eda_signal) // eda_samples_per_segment
         
  
-
- 
         subject_durations[subject_id] = min(bvp_segment_amount, eda_segment_amount)
         num_segments = min(bvp_segment_amount, eda_segment_amount)
 
@@ -107,11 +105,11 @@ def sliding_window_assign_labels(all_segments, subject_durations, window, step):
     #Updated all segments with labels            
     return all_segments
 
-def sliding_windows(preprocessed_data):
-    segment_duration = 60
-    step_size = 60
+def sliding_windows(preprocessed_data, segment_duration=60, step_size=20):
+    #segment_duration = 120 
+    #step_size = 40
     bvp_fs=64.0
-    eda_fs=64.0
+    eda_fs=64.0 
 
     all_segments = []
     subject_durations = {} 
@@ -180,7 +178,8 @@ def sliding_windows(preprocessed_data):
                     'segment_idx': seg_inx,
                     'bvp_segment': bvp_signal[bvp_start:bvp_end],
                     'eda_segment': eda_signal[eda_start:eda_end],
-                    'label': curr_label
+                    'label': curr_label,
+                    'seg_start' : seg_start
 
                 })
                 seg_start += step_size

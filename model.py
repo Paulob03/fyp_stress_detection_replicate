@@ -7,8 +7,35 @@ from sklearn.metrics import classification_report, f1_score, make_scorer, confus
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 from feature_extraction import *
+
+def subject_normalize(features, feature_names):
+
+    df = pd.DataFrame(features)
+    
+    normalized_dfs = []
+    
+    for subject_id, subject_df in df.groupby('subject_id'):
+        rest_segments = subject_df[subject_df['label'] == 0]
+   
+        
+        # Mean and std of each feature during REST only
+        rest_means = rest_segments[feature_names].mean()
+        rest_stds = rest_segments[feature_names].std(ddof=1)
+        
+        # If a feature has zero variance at rest, don't divide by zero
+        rest_stds = rest_stds.replace(0, 1)
+        
+        # Normalize all segments relative to rest baseline
+        subject_normalized = subject_df.copy()
+        subject_normalized[feature_names] = (subject_df[feature_names] - rest_means) / rest_stds
+        
+        normalized_dfs.append(subject_normalized)
+    #
+    return pd.concat(normalized_dfs, ignore_index=True)
 
 def model(features):
 
@@ -22,12 +49,14 @@ def model(features):
         'N_PEAKS', 'M_Amp', 'M_RT', 'M_D', 'LF', 'LF_HF_Ratio', 'HFn'
     ]
      
-   
+    df = subject_normalize(features, feature_names)
     X = df[feature_names].values
     y = df['label'].values
     groups = df['subject_id'].values
 
     pipeline = ImbPipeline([
+        ('scaler', StandardScaler()),
+        ('pca', PCA()),
        # ('smote', SMOTE(random_state=42)),
         ('classifier', BalancedRandomForestClassifier(
 
@@ -41,13 +70,13 @@ def model(features):
 
     
     param_grid = {
-        'classifier__n_estimators': [100],
-        'classifier__max_depth': [5, 6, 8], 
-        'classifier__min_samples_split': [8,10, 15],
-        'classifier__min_samples_leaf': [4]
-    }
-    
-    gs = GridSearchCV(pipeline, param_grid, scoring="accuracy", cv=gkf)
+    'pca__n_components':            [10, 15, 20, 25],
+    'classifier__n_estimators':     [100, 200, 300],
+    'classifier__max_depth':        [5, 6, 8, 10, 15, 20],
+    'classifier__min_samples_split':[5, 8, 10, 15, 20],
+    'classifier__min_samples_leaf': [2, 4, 6, 8],
+}
+    gs = GridSearchCV(pipeline, param_grid, scoring="balanced_accuracy", cv=gkf, n_jobs=-1)
     gs.fit(X, y, groups=groups)
     print(gs.best_params_, gs.best_score_)
 
@@ -58,6 +87,7 @@ def model(features):
     cv=gkf, 
     scoring={
         'accuracy': 'accuracy',
+        'balanced_accuracy': 'balanced_accuracy',
         'f1': 'f1',
         'precision': 'precision',
         'recall': 'recall'
@@ -65,7 +95,8 @@ def model(features):
 
     return_train_score=True )
     print(f"\nTraining Accuracy Mean: {np.mean(cv_results['train_accuracy']):.4f}")
-    print(f"\nAccuracy Mean: {np.mean(cv_results['test_accuracy']):.4f}")
+    print(f"Accuracy Mean: {np.mean(cv_results['test_accuracy']):.4f}")
+    print(f"Balanced_Accuracy Mean: {np.mean(cv_results['test_balanced_accuracy']):.4f}")
     print(f"F1-Score Mean: {np.mean(cv_results['test_f1']):.4f}")
     print(f"Precision Mean: {np.mean(cv_results['test_precision']):.4f}")
     print(f"Recall Mean: {np.mean(cv_results['test_recall']):.4f}")
@@ -75,11 +106,28 @@ def model(features):
 
     cm = confusion_matrix(y, y_pred)
     print(cm)
-    cm_display = ConfusionMatrixDisplay(confusion_matrix = cm, display_labels = ['REST', 'STRESS'])
+    #cm_display = ConfusionMatrixDisplay(confusion_matrix = cm, display_labels = ['REST', 'STRESS'])
 
-    cm_display.plot()
-    plt.show()
-    return cv_results
+    #cm_display.plot()
+    #plt.show()
+    false_negatives = np.where((y == 1) & (y_pred == 0))[0]  # missed stress
+    false_positives = np.where((y == 0) & (y_pred == 1))[0]  # wrong stress prediction
+
+    print("False negative indices:", false_negatives)
+    print("False positive indices:", false_positives)
+    print(df.iloc[false_negatives][['subject_id', 'seg_start', 'label']])
+    fn_df = df.iloc[false_negatives][['subject_id', 'seg_start', 'label']].copy()
+    fp_df = df.iloc[false_positives][['subject_id', 'seg_start', 'label']].copy()
+
+    fn_df['seg_start_min'] = fn_df['seg_start'] / 60
+    fp_df['seg_start_min'] = fp_df['seg_start'] / 60
+
+    print("False negatives by minute:")
+    print(fn_df['seg_start_min'].value_counts().sort_index())
+
+    print("\nFalse positives by minute:")
+    print(fp_df['seg_start_min'].value_counts().sort_index())
+    return cv_results, gs.best_estimator_, X, y, groups, gkf
 
 if __name__ == "__main__":
     subjects_data = load_all_subjects()
