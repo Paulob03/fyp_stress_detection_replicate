@@ -105,7 +105,7 @@ def sliding_window_assign_labels(all_segments, subject_durations, window, step):
     #Updated all segments with labels            
     return all_segments
 
-def sliding_windows(preprocessed_data, segment_duration=60, step_size=20):
+def sliding_windows(preprocessed_data, segment_duration=120, step_size=60):
     #segment_duration = 120 
     #step_size = 40
     bvp_fs=64.0

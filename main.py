@@ -3,6 +3,8 @@ from preprocess import *
 from segmentation import *
 from feature_extraction import *
 from model import *
+#from model_xgboost import *
+#from model_SVM import *
 from RFwith10CV import *
 from matlab_conversion.PPG_conversion import run_all_subjects
 from matlab_conversion.EDA_conversion import *

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-with_feats    = pd.read_csv("window_sweep_results.csv")
+with_feats    = pd.read_csv("window_sweep_with_new_features.csv")
 without_feats = pd.read_csv("window_sweep_no_new_features.csv")
 
 labels = with_feats["label"].str.replace("win", "").str.replace("_step", "/") + "s"

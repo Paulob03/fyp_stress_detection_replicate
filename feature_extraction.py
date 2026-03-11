@@ -149,39 +149,63 @@ def extract_features(valid_segments):
             segment['HFn'] = segment['HF'] / total_power if total_power > 0 else 0
         else:
             segment['HF'] = 0
+            segment['LF'] = 0
+            segment['LF_HF_Ratio'] = 0
+            segment['HFn'] = 0
+
+
+        try:
+            eda_decomposed = nk.eda_phasic(eda_signal, sampling_rate=64, method='highpass')
+            tonic = eda_decomposed['EDA_Tonic'].values
+            phasic = eda_decomposed['EDA_Phasic'].values
+            segment['SCL_Mean'] = np.mean(tonic)           # Baseline arousal level
+            segment['SCL_Slope'] = (tonic[-1] - tonic[0]) / len(tonic)  # Arousal trend over segment
+            segment['ISCR'] = np.trapz(np.abs(phasic)) / len(phasic)    # Total sympathetic activation
+            segment['Phasic_Std'] = np.std(phasic)         # Phasic response variability
+        except Exception:
+            segment['SCL_Mean'] = np.mean(eda_signal)
+            segment['SCL_Slope'] = 0
+            segment['ISCR'] = 0
+            segment['Phasic_Std'] = np.std(eda_signal)
 
         try:
             eda_results = eda_module.eda(signal=eda_signal, sampling_rate=64.0, show=False)
-            #Number of SCR peaks detected
-            segment['N_PEAKS'] = len(eda_results['peaks'])
-            #NMean SCR amplitude 
-            segment['M_Amp'] = np.mean(eda_results['amplitudes'])
-            #Mean rise time (seconds)
-            segment['M_RT'] = np.mean(eda_results['rise_times'])
-
+            segment['N_PEAKS'] = len(eda_results['peaks'])          # Number of SCR events
+            segment['M_Amp'] = np.mean(eda_results['amplitudes'])   # Average SCR amplitude
+            segment['M_RT'] = np.mean(eda_results['rise_times'])    # Average rise time
             rise_times = eda_results['rise_times']
             half_rec = eda_results['half_rec']
-            valid_durations = []
-            for i in range(len(rise_times)):
-                if half_rec[i] is not None:
-                    duration = rise_times[i] + half_rec[i]
-                    valid_durations.append(duration)
-
-            #Mean SCR duration (rise time + half-recovery time)
-            if len(valid_durations) > 0:
-                segment['M_D'] = np.mean(valid_durations)
+            valid_durations = [rise_times[i] + half_rec[i]
+                            for i in range(len(rise_times)) if half_rec[i] is not None]
+            segment['M_D'] = np.mean(valid_durations) if valid_durations else segment['M_RT'] * 2.5  # SCR duration
+            if 'filtered' in eda_results:
+                segment['M_SCR'] = np.mean(eda_results['filtered'])  # Mean filtered SCR signal
             else:
-                
-                segment['M_D'] = segment['M_RT'] * 2.5 
-
-
-            #segment['M_SCR'] = np.mean(eda_results['amplitudes'])
-        except ValueError as e:
-            #No SCR pulses detected in this segment
+                segment['M_SCR'] = np.mean(eda_signal)
+        except ValueError:
             segment['N_PEAKS'] = 0
             segment['M_Amp'] = 0
             segment['M_RT'] = 0
             segment['M_D'] = 0
+            segment['M_SCR'] = np.mean(eda_signal)
+
+        try:
+            hr_instant = 60.0 / pp_intervals
+            eda_resampled = np.interp(
+                np.linspace(0, 1, len(hr_instant)),
+                np.linspace(0, 1, len(eda_signal)),
+                eda_signal
+            )
+            if np.std(hr_instant) > 0 and np.std(eda_resampled) > 0:
+                corr = np.corrcoef(hr_instant, eda_resampled)[0, 1]
+                segment['HR_EDA_Corr'] = corr if np.isfinite(corr) else 0  # HR-EDA coupling
+            else:
+                segment['HR_EDA_Corr'] = 0
+            eda_std = np.std(eda_signal)
+            segment['BVP_EDA_Var_Ratio'] = np.std(bvp_signal) / eda_std if eda_std > 0 else 0  # Variability ratio
+        except Exception:
+            segment['HR_EDA_Corr'] = 0
+            segment['BVP_EDA_Var_Ratio'] = 0
 
     return valid_segments
 
